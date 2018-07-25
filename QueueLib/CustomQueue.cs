@@ -5,6 +5,10 @@ using System.Linq;
 
 namespace QueueLib
 {
+    /// <summary>
+    /// Class that provides queue implementation
+    /// </summary>
+    /// <typeparam name="T">Queue values type</typeparam>
     public class CustomQueue <T> : IEnumerable<T>, IEnumerable
     {
         #region Constants
@@ -20,10 +24,16 @@ namespace QueueLib
         #endregion
 
         #region Properties
+        /// <summary>
+        /// Property that represent current amount of values in queue
+        /// </summary>
         public int Count { get; private set; }
         #endregion
 
         #region .ctors
+        /// <summary>
+        /// Default <see cref="CustomQueue{T}"/> ctor
+        /// </summary>
         public CustomQueue()
         {
             _capacity = DEFAULT_QUEUE_CAPACITY;
@@ -31,6 +41,11 @@ namespace QueueLib
             Count = 0;
         }
 
+        /// <summary>
+        /// <see cref="CustomQueue{T}"/> ctor based on <paramref name="capacity"/> value
+        /// </summary>
+        /// <param name="capacity">Needed capacity of queue</param>
+        /// <exception cref="ArgumentException">Throw when <paramref name="capacity"/> is less than 1</exception>
         public CustomQueue(int capacity)
         {
             if (capacity <= 0)
@@ -42,29 +57,56 @@ namespace QueueLib
             _queueBase = new T[_capacity];
             Count = 0;
         }
+
+        /// <summary>
+        /// <see cref="CustomQueue{T}"/> ctor based on <paramref name="collection"/> value
+        /// </summary>
+        /// <param name="collection">Initializer collection</param>
+        /// <exception cref="ArgumentException">Throws when <paramref name="collection"/> is empty</exception>
+        /// <exception cref="ArgumentNullException">Throw when <paramref name="collection"/> is equal to null</exception>
+        public CustomQueue(IEnumerable<T> collection)
+        {
+            _capacity = collection.Count();
+            _queueBase = new T[_capacity];
+            EnqueueRange(collection);
+        }
         #endregion
 
         #region Public API
-        public void Enqueue(T value) => EnqueueInner(value);
-
-        public void EnqueueRange(IEnumerable<T> assert)
+        /// <summary>
+        /// Clear the queue values
+        /// </summary>
+        public void Clear()
         {
-            if (assert == null)
-            {
-                throw new ArgumentNullException($"{nameof(assert)} can't be equal to null!");
-            }
-
-            if (assert.Count() == 0)
-            {
-                throw new ArgumentException($"{nameof(assert)} can't be empty!");
-            }
-
-            foreach(var i in assert)
-            {
-                EnqueueInner(i);
-            }
+            Count = _head = _tail = 0;
+            Array.Clear(_queueBase, 0, _queueBase.Length);
         }
 
+        /// <summary>
+        /// Check if queue contains <paramref name="item"/>
+        /// </summary>
+        /// <param name="item">Needed queue item</param>
+        /// <returns>bool result</returns>
+        public bool Contains(T item)
+        {
+            EqualityComparer<T> comparer = EqualityComparer<T>.Default;
+
+            for (int i = 0; i < Count; i++)
+            {
+                if (comparer.Equals(this[i], item))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Popped first element from queue
+        /// </summary>
+        /// <exception cref="InvalidOperationException">Throws when <see cref="Count"/> is equal to 0</exception>
+        /// <returns>popped value</returns>
         public T Dequeue()
         {
             if (Count == 0)
@@ -80,27 +122,56 @@ namespace QueueLib
             return value;
         }
 
-        public void Clear()
-        {
-            Count = _head = _tail = 0;
-            Array.Clear(_queueBase, 0, _queueBase.Length);
-        }
+        /// <summary>
+        /// Insert <paramref name="value"/> into the enqueue
+        /// </summary>
+        /// <param name="value">inserted value</param>
+        /// <exception cref="ArgumentNullException">Throws when <paramref name="value"/> is equal to null</exception>
+        public void Enqueue(T value) => EnqueueInner(value);
 
-        public bool Contains(T item)
+        /// <summary>
+        /// Insert <paramref name="collection"/> into the enqueue
+        /// </summary>
+        /// <param name="collection">inserted collection</param>
+        /// <exception cref="ArgumentException">Throws when <paramref name="collection"/> is empty</exception>
+        /// <exception cref="ArgumentNullException">Throws when <paramref name="collection"/> or one of this elements is equal to null</exception>
+        public void EnqueueRange(IEnumerable<T> collection)
         {
-            EqualityComparer<T> comparer = EqualityComparer<T>.Default;
-
-            for(int i = 0; i < Count; i++)
+            if (collection == null)
             {
-                if (comparer.Equals(this[i], item))
-                {
-                    return true;
-                }
+                throw new ArgumentNullException($"{nameof(collection)} can't be equal to null!");
             }
 
-            return false;
+            if (collection.Count() == 0)
+            {
+                throw new ArgumentException($"{nameof(collection)} can't be empty!");
+            }
+
+            foreach(var i in collection)
+            {
+                EnqueueInner(i);
+            }
         }
 
+        /// <summary>
+        /// Get the first element of queue without removing it
+        /// </summary>
+        /// <exception cref="InvalidOperationException">Throws when <see cref="Count"/> is equal to 0</exception>
+        /// <returns>first element of queue</returns>
+        public T Peek()
+        {
+            if (Count == 0)
+            {
+                throw new InvalidOperationException($"Can't do this operation when {nameof(Count)} is equal to 0!");
+            }
+
+            return this[Count - 1];
+        }
+
+        /// <summary>
+        /// Return <see cref="List{T}"/> representation of queue
+        /// </summary>
+        /// <returns><see cref="List{T}"/> representation of queue</returns>
         public List<T> ToList()
         {
             List<T> result = new List<T>(Count);
@@ -112,6 +183,10 @@ namespace QueueLib
             return result;
         }
 
+        /// <summary>
+        /// Return <see cref="T[]"/> representation of queue
+        /// </summary>
+        /// <returns><see cref="T[]"/> representation of queue</returns>
         public T[] ToArray()
         {
             T[] result = new T[Count];
@@ -134,22 +209,6 @@ namespace QueueLib
             }
         }
 
-        private void IncreaseCapacity()
-        {
-            int newCapacity = _capacity * 2;
-            T[] temporary = new T[newCapacity];
-
-            for(int i = 0; i < Count; i++)
-            {
-                temporary[i] = this[i];
-            }
-
-            _queueBase = temporary;
-            _capacity = newCapacity;
-            _head = 0;
-            _tail = Count == _capacity ? 0 : Count;
-        }
-
         private void EnqueueInner(T value)
         {
             if (value == null)
@@ -166,6 +225,22 @@ namespace QueueLib
             _tail = (_tail + 1) % _queueBase.Length;
             Count++;
         }
+
+        private void IncreaseCapacity()
+        {
+            int newCapacity = _capacity * 2;
+            T[] temporary = new T[newCapacity];
+
+            for(int i = 0; i < Count; i++)
+            {
+                temporary[i] = this[i];
+            }
+
+            _queueBase = temporary;
+            _capacity = newCapacity;
+            _head = 0;
+            _tail = Count == _capacity ? 0 : Count;
+        }
         #endregion
 
         #region IEnumerable and Enumerator
@@ -175,6 +250,9 @@ namespace QueueLib
         IEnumerator<T> IEnumerable<T>.GetEnumerator()
             => new Enumerator(this);
 
+        /// <summary>
+        /// Structure representing enumerator of <see cref="CustomQueue{T}"/>
+        /// </summary>
         public struct Enumerator : IEnumerator<T>, IEnumerator
         {
             #region Fields
@@ -183,6 +261,10 @@ namespace QueueLib
             private T _currentElement;
             #endregion
 
+            /// <summary>
+            /// ctor for enumerator of <see cref="CustomQueue{T}"/>
+            /// </summary>
+            /// <param name="queue">needed queue</param>
             internal Enumerator(CustomQueue<T> queue)
             {
                 _queue = queue;
@@ -190,6 +272,10 @@ namespace QueueLib
                 _currentElement = default;
             }
 
+            /// <summary>
+            /// Property representing current element of queue
+            /// </summary>
+            /// <exception cref="InvalidOperationException">Throws when enumerator is finished or hasn't started yet</exception>
             public T Current
             {
                 get
@@ -210,6 +296,10 @@ namespace QueueLib
                 }
             }
 
+            /// <summary>
+            /// Property representing current element of queue
+            /// </summary>
+            /// <exception cref="InvalidOperationException">Throws when enumerator is finished or hasn't started yet</exception>
             object IEnumerator.Current
             {
                 get
@@ -230,12 +320,19 @@ namespace QueueLib
                 }
             }
 
+            /// <summary>
+            /// Dispose enumerator
+            /// </summary>
             public void Dispose()
             {
                 _index = -2;
                 _currentElement = default;
             }
 
+            /// <summary>
+            /// Element for get current element in foreach cycle
+            /// </summary>
+            /// <returns>is possible to move next</returns>
             public bool MoveNext()
             {
                 if (_index == -2)
@@ -258,6 +355,9 @@ namespace QueueLib
                 return true;
             }
 
+            /// <summary>
+            /// Reset index of enumerator
+            /// </summary>
             public void Reset() => _index = -1;
         }
         #endregion
