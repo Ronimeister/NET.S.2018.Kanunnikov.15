@@ -78,6 +78,11 @@ namespace QueueLib
         /// </summary>
         public void Clear()
         {
+            if (Count == 0)
+            {
+                return;
+            }
+
             Count = _head = _tail = 0;
             Array.Clear(_queueBase, 0, _queueBase.Length);
         }
@@ -89,17 +94,12 @@ namespace QueueLib
         /// <returns>bool result</returns>
         public bool Contains(T item)
         {
-            EqualityComparer<T> comparer = EqualityComparer<T>.Default;
-
-            for (int i = 0; i < Count; i++)
+            if (Count == 0)
             {
-                if (comparer.Equals(this[i], item))
-                {
-                    return true;
-                }
+                return false;
             }
 
-            return false;
+            return ContainsInner(item);
         }
 
         /// <summary>
@@ -165,7 +165,7 @@ namespace QueueLib
                 throw new InvalidOperationException($"Can't do this operation when {nameof(Count)} is equal to 0!");
             }
 
-            return this[Count - 1];
+            return this[0];
         }
 
         /// <summary>
@@ -177,7 +177,7 @@ namespace QueueLib
             List<T> result = new List<T>(Count);
             for (int i = 0; i < Count; i++)
             {
-                result.Add(_queueBase[i]);
+                result.Add(this[i]);
             }
 
             return result;
@@ -192,7 +192,7 @@ namespace QueueLib
             T[] result = new T[Count];
             for (int i = 0; i < Count; i++)
             {
-                result[i] = _queueBase[i];
+                result[i] = this[i];
             }
 
             return result;
@@ -240,6 +240,21 @@ namespace QueueLib
             _capacity = newCapacity;
             _head = 0;
             _tail = Count == _capacity ? 0 : Count;
+        }
+
+        private bool ContainsInner(T item)
+        {
+            EqualityComparer<T> comparer = EqualityComparer<T>.Default;
+
+            for (int i = 0; i < Count; i++)
+            {
+                if (comparer.Equals(this[i], item))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
         #endregion
 
